@@ -1,0 +1,116 @@
+export type Sheet = {
+  img: HTMLImageElement;
+  cols: number;
+  rows: number;
+};
+
+export type Art = {
+  hawkFly: Sheet | null;
+  hawkShoot: Sheet | null;
+  hiker: Sheet | null;
+  hunter: Sheet | null;
+  boss: Sheet | null;
+  eagle: Sheet | null;
+  pickups: Sheet | null;
+  snatch: Sheet | null;
+  muzzle: Sheet | null;
+  meadow: HTMLImageElement | null;
+  tree: HTMLImageElement | null;
+  farmhouse: HTMLImageElement | null;
+  hay: HTMLImageElement | null;
+  hay2: HTMLImageElement | null;
+  bush: HTMLImageElement | null;
+  stone: HTMLImageElement | null;
+};
+
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+function sheet(img: HTMLImageElement | null, cols: number, rows: number): Sheet | null {
+  if (!img) return null;
+  return { img, cols, rows };
+}
+
+export async function loadArt(): Promise<Art> {
+  const [
+    hawkFly,
+    hawkShoot,
+    hiker,
+    hunter,
+    boss,
+    eagle,
+    pickups,
+    snatch,
+    muzzle,
+    meadow,
+    tree,
+    farmhouse,
+    hay,
+    hay2,
+    bush,
+    stone,
+  ] = await Promise.all([
+    loadImage("/sprites/hawk-fly.png"),
+    loadImage("/sprites/hawk-shoot.png"),
+    loadImage("/sprites/hiker.png"),
+    loadImage("/sprites/hunter.png"),
+    loadImage("/sprites/boss.png"),
+    loadImage("/sprites/eagle.png"),
+    loadImage("/sprites/pickups.png"),
+    loadImage("/sprites/snatch.png"),
+    loadImage("/sprites/muzzle.png"),
+    loadImage("/sprites/meadow.png"),
+    loadImage("/sprites/tree.png"),
+    loadImage("/sprites/farmhouse.png"),
+    loadImage("/sprites/hay.png"),
+    loadImage("/sprites/hay2.png"),
+    loadImage("/sprites/bush.png"),
+    loadImage("/sprites/stone.png"),
+  ]);
+  return {
+    hawkFly: sheet(hawkFly, 4, 4),
+    hawkShoot: sheet(hawkShoot, 2, 2),
+    hiker: sheet(hiker, 4, 4),
+    hunter: sheet(hunter, 4, 4),
+    boss: sheet(boss, 4, 4),
+    eagle: sheet(eagle, 4, 4),
+    pickups: sheet(pickups, 2, 2),
+    snatch: sheet(snatch, 2, 2),
+    muzzle: sheet(muzzle, 2, 2),
+    meadow,
+    tree,
+    farmhouse,
+    hay,
+    hay2,
+    bush,
+    stone,
+  };
+}
+
+export function drawSheet(
+  ctx: CanvasRenderingContext2D,
+  sheet: Sheet,
+  col: number,
+  row: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  flash = false,
+) {
+  const fw = sheet.img.width / sheet.cols;
+  const fh = sheet.img.height / sheet.rows;
+  const sx = Math.max(0, Math.min(sheet.cols - 1, col | 0)) * fw;
+  const sy = Math.max(0, Math.min(sheet.rows - 1, row | 0)) * fh;
+  ctx.save();
+  if (flash) ctx.globalCompositeOperation = "lighter";
+  ctx.drawImage(sheet.img, sx, sy, fw, fh, x - w / 2, y - h, w, h);
+  ctx.restore();
+}
