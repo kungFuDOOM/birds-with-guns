@@ -104,13 +104,27 @@ export function drawSheet(
   w: number,
   h: number,
   flash = false,
+  tilt = 0,
+  filter = "",
 ) {
   const fw = sheet.img.width / sheet.cols;
   const fh = sheet.img.height / sheet.rows;
   const sx = Math.max(0, Math.min(sheet.cols - 1, col | 0)) * fw;
   const sy = Math.max(0, Math.min(sheet.rows - 1, row | 0)) * fh;
   ctx.save();
-  if (flash) ctx.globalCompositeOperation = "lighter";
-  ctx.drawImage(sheet.img, sx, sy, fw, fh, x - w / 2, y - h, w, h);
+  ctx.translate(x, y - h / 2);
+  if (tilt !== 0) ctx.rotate(tilt);
+  if (flash) {
+    ctx.filter = "brightness(2.3) contrast(1.25) saturate(0.3)";
+  } else if (filter) {
+    ctx.filter = filter;
+  }
+  ctx.drawImage(sheet.img, sx, sy, fw, fh, -w / 2, -h / 2, w, h);
+  if (flash) {
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = 0.55;
+    ctx.drawImage(sheet.img, sx, sy, fw, fh, -w / 2, -h / 2, w, h);
+  }
   ctx.restore();
 }
+

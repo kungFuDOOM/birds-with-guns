@@ -9,6 +9,12 @@ const GAME_CODES = new Set([
   "ArrowRight",
   "Space",
   "KeyR",
+  "KeyE",
+  "ShiftLeft",
+  "ShiftRight",
+  "Digit1",
+  "Digit2",
+  "Digit3",
   "Escape",
   "Enter",
 ]);
@@ -20,9 +26,11 @@ export type Actions = {
   aimY: number;
   fire: boolean;
   firePressed: boolean;
+  dashPressed: boolean;
   reloadPressed: boolean;
   pausePressed: boolean;
   startPressed: boolean;
+  perkPressed: number;
   mouseX: number;
   mouseY: number;
   usingMouseAim: boolean;
@@ -32,15 +40,18 @@ export type Actions = {
 const keys = new Set<string>();
 const injected = new Set<string>();
 let prevFire = false;
+let prevDash = false;
 let prevReload = false;
 let prevPause = false;
 let prevStart = false;
+let prevPerk = -1;
 let mouseX = 0;
 let mouseY = 0;
 let hasMouse = false;
 let touchMoveX = 0;
 let touchMoveY = 0;
 let touchFire = false;
+let touchDash = false;
 let usingTouch = false;
 let canvas: HTMLCanvasElement | null = null;
 
@@ -75,16 +86,24 @@ function onMouseMove(e: PointerEvent) {
 function onMouseDown(e: PointerEvent) {
   if (e.pointerType === "touch") return;
   if (e.button === 0) keys.add("Mouse0");
+  if (e.button === 2) keys.add("Mouse2");
   hasMouse = true;
 }
 
 function onMouseUp(e: PointerEvent) {
   if (e.button === 0) keys.delete("Mouse0");
+  if (e.button === 2) keys.delete("Mouse2");
+}
+
+function onContextMenu(e: MouseEvent) {
+  e.preventDefault();
 }
 
 function onCancel() {
   keys.delete("Mouse0");
+  keys.delete("Mouse2");
   touchFire = false;
+  touchDash = false;
 }
 
 function radial(x: number, y: number, dz = 0.18) {
@@ -104,6 +123,7 @@ export function attachInput(el: HTMLCanvasElement) {
   });
   el.addEventListener("pointermove", onMouseMove);
   el.addEventListener("pointerdown", onMouseDown);
+  el.addEventListener("contextmenu", onContextMenu);
   window.addEventListener("pointerup", onMouseUp);
   window.addEventListener("pointercancel", onCancel);
 }
@@ -114,6 +134,7 @@ export function detachInput() {
   window.removeEventListener("blur", onBlur);
   canvas?.removeEventListener("pointermove", onMouseMove);
   canvas?.removeEventListener("pointerdown", onMouseDown);
+  canvas?.removeEventListener("contextmenu", onContextMenu);
   window.removeEventListener("pointerup", onMouseUp);
   window.removeEventListener("pointercancel", onCancel);
   canvas = null;
@@ -127,6 +148,11 @@ export function setTouchMove(x: number, y: number) {
 
 export function setTouchFire(on: boolean) {
   touchFire = on;
+  usingTouch = true;
+}
+
+export function setTouchDash(on: boolean) {
+  touchDash = on;
   usingTouch = true;
 }
 
@@ -148,6 +174,7 @@ export function pollActions(): Actions {
   let aimX = 0;
   let aimY = 0;
   let padFire = false;
+  let padDash = false;
   let padStart = false;
   for (const pad of pads) {
     if (!pad || pad.mapping !== "standard") continue;
@@ -158,6 +185,8 @@ export function pollActions(): Actions {
     aimX += rs.x;
     aimY += rs.y;
     if (pad.buttons[0]?.pressed || (pad.buttons[7]?.value ?? 0) > 0.4) padFire = true;
+    if (pad.buttons[1]?.pressed || pad.buttons[5]?.pressed || (pad.buttons[6]?.value ?? 0) > 0.4)
+      padDash = true;
     if (pad.buttons[9]?.pressed) padStart = true;
   }
 
@@ -170,20 +199,32 @@ export function pollActions(): Actions {
     moveY /= mag;
   }
 
-  const fire =
-    k.has("Space") || k.has("Mouse0") || touchFire || padFire;
+  const fire = k.has("Space") || k.has("Mouse0") || touchFire || padFire;
+  const dash =
+    k.has("ShiftLeft") ||
+    k.has("ShiftRight") ||
+    k.has("KeyE") ||
+    k.has("Mouse2") ||
+    touchDash ||
+    padDash;
   const reload = k.has("KeyR");
   const pause = k.has("Escape");
   const start = k.has("Enter") || padStart;
+  const perk = k.has("Digit1") ? 0 : k.has("Digit2") ? 1 : k.has("Digit3") ? 2 : -1;
 
   const firePressed = fire && !prevFire;
+  const dashPressed = dash && !prevDash;
   const reloadPressed = reload && !prevReload;
   const pausePressed = pause && !prevPause;
   const startPressed = start && !prevStart;
+  const perkPressed = perk !== -1 && perk !== prevPerk ? perk : -1;
+
   prevFire = fire;
+  prevDash = dash;
   prevReload = reload;
   prevPause = pause;
   prevStart = start;
+  prevPerk = perk;
 
   return {
     moveX,
@@ -192,9 +233,11 @@ export function pollActions(): Actions {
     aimY,
     fire,
     firePressed,
+    dashPressed,
     reloadPressed,
     pausePressed,
     startPressed,
+    perkPressed,
     mouseX,
     mouseY,
     usingMouseAim: hasMouse && Math.hypot(aimX, aimY) < 0.2 && !usingTouch,
