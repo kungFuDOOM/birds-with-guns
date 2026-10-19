@@ -1,4 +1,4 @@
-import { DECOR, FARM, POND, TREES, WORLD } from "./config";
+import { DECOR, FARM, POND, TREES, WORLD } from "./config.ts";
 
 export function inWorld(x: number, y: number, pad = 36) {
   return x > pad && y > pad && x < WORLD - pad && y < WORLD - pad;
@@ -55,17 +55,17 @@ export function underCanopy(x: number, y: number) {
   return null;
 }
 
-export function hitsCover(x: number, y: number) {
-  if (inFarm(x, y, 4)) return true;
+export function hitsCover(x: number, y: number): "farm" | "tree" | "hay" | null {
+  if (inFarm(x, y, 4)) return "farm";
   for (const t of TREES) {
-    if (Math.hypot(x - t.x, y - t.y) < t.canopy * 0.42) return true;
+    if (Math.hypot(x - t.x, y - t.y) < t.canopy * 0.42) return "tree";
   }
   for (const d of DECOR) {
     if (d.kind === "hay" || d.kind === "hay2") {
-      if (Math.hypot(x - d.x, y - d.y) < d.s * 0.35) return true;
+      if (Math.hypot(x - d.x, y - d.y) < d.s * 0.35) return "hay";
     }
   }
-  return false;
+  return null;
 }
 
 export function walkableHuman(x: number, y: number) {
