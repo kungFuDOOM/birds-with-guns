@@ -23,6 +23,12 @@ export type Art = {
   stone: HTMLImageElement | null;
 };
 
+/** Public-folder URL. Vite `base` is `/` on Vercel and `/birds-with-guns/` on Pages. */
+function publicAsset(file: string): string {
+  const base = import.meta.env.BASE_URL || "/";
+  return `${base}${file.replace(/^\//, "")}`;
+}
+
 function loadImage(src: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
@@ -57,22 +63,22 @@ export async function loadArt(): Promise<Art> {
     bush,
     stone,
   ] = await Promise.all([
-    loadImage("/sprites/hawk-fly.png"),
-    loadImage("/sprites/hawk-shoot.png"),
-    loadImage("/sprites/hiker.png"),
-    loadImage("/sprites/hunter.png"),
-    loadImage("/sprites/boss.png"),
-    loadImage("/sprites/eagle.png"),
-    loadImage("/sprites/pickups.png"),
-    loadImage("/sprites/snatch.png"),
-    loadImage("/sprites/muzzle.png"),
-    loadImage("/sprites/meadow.png"),
-    loadImage("/sprites/tree.png"),
-    loadImage("/sprites/farmhouse.png"),
-    loadImage("/sprites/hay.png"),
-    loadImage("/sprites/hay2.png"),
-    loadImage("/sprites/bush.png"),
-    loadImage("/sprites/stone.png"),
+    loadImage(publicAsset("/sprites/hawk-fly.png")),
+    loadImage(publicAsset("/sprites/hawk-shoot.png")),
+    loadImage(publicAsset("/sprites/hiker.png")),
+    loadImage(publicAsset("/sprites/hunter.png")),
+    loadImage(publicAsset("/sprites/boss.png")),
+    loadImage(publicAsset("/sprites/eagle.png")),
+    loadImage(publicAsset("/sprites/pickups.png")),
+    loadImage(publicAsset("/sprites/snatch.png")),
+    loadImage(publicAsset("/sprites/muzzle.png")),
+    loadImage(publicAsset("/sprites/meadow.png")),
+    loadImage(publicAsset("/sprites/tree.png")),
+    loadImage(publicAsset("/sprites/farmhouse.png")),
+    loadImage(publicAsset("/sprites/hay.png")),
+    loadImage(publicAsset("/sprites/hay2.png")),
+    loadImage(publicAsset("/sprites/bush.png")),
+    loadImage(publicAsset("/sprites/stone.png")),
   ]);
   return {
     hawkFly: sheet(hawkFly, 4, 4),

@@ -1,0 +1,92 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build static site
+        run: npm run build:pages
+
+      - name: Check asset paths
+        run: |
+          node --input-type=module <<'EOF'
+          import { readFileSync, readdirSync, statSync } from "node:fs";
+          import { join } from "node:path";
+
+          const base = "/birds-with-guns/";
+          const html = readFileSync("dist-pages/index.html", "utf8");
+          const shell404 = readFileSync("dist-pages/404.html", "utf8");
+          if (!html.includes(`${base}assets/`)) {
+            throw new Error("index.html is missing /birds-with-guns/assets/ URLs");
+          }
+          if (html !== shell404) {
+            throw new Error("404.html must match index.html so unknown paths still boot the game");
+          }
+          const assets = readdirSync("dist-pages/assets");
+          if (!assets.some((name) => name.endsWith(".js"))) {
+            throw new Error("dist-pages/assets has no JavaScript");
+          }
+          if (!assets.some((name) => name.endsWith(".css"))) {
+            throw new Error("dist-pages/assets has no CSS");
+          }
+          const js = assets.filter((name) => name.endsWith(".js"));
+          const bundle = js.map((name) => readFileSync(join("dist-pages/assets", name), "utf8")).join("\n");
+          if (!bundle.includes(`${base}\${`) || !bundle.includes("/sprites/hawk-fly.png")) {
+            throw new Error("client bundle does not prefix sprite URLs with the Pages base");
+          }
+          for (const file of ["favicon.svg", "sprites/hawk-fly.png", "sprites/meadow.png", ".nojekyll"]) {
+            const path = join("dist-pages", file);
+            if (!statSync(path).isFile()) throw new Error(`missing ${file}`);
+          }
+          console.log(`pages bundle ok (${assets.length} hashed assets)`);
+          EOF
+
+      - name: Setup Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist-pages
+          include-hidden-files: true
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
